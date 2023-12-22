@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 const { Pool } = require('pg');
 
+const {randDrinks, randNumber, randProductDescription} = require('@ngneat/falso')
+
 const pool = new Pool({
   user: 'lukemccrae',
   host: 'localhost',
@@ -62,5 +64,37 @@ router.post('/products', async function(req, res, next) {
     res.status(500).send("database insert failed")
   }
 });
+
+router.post('/random-product', async function(req, res, next) {
+  console.log(req.body, '<< req body')
+  
+  // quantity - a random number of items in the inventory
+  const randomProduct = {
+    product_name: randDrinks(),
+    serial_number: randNumber(),
+    description: randProductDescription(),
+    quantity: randNumber({ min: 10, max: 50 }),
+    created_at: "2023-12-22T07:00:00.000Z"
+    
+  }
+
+  const { serial_number, product_name, description, quantity, created_at } = randomProduct;
+
+  const insertQuery = `
+  INSERT INTO products (serial_number, product_name, description, quantity, created_at)
+  VALUES ($1, $2, $3, $4, $5)
+  RETURNING *;`;
+
+  const values = [serial_number, product_name, description, quantity, created_at];
+
+  try {
+    const result = await pool.query(insertQuery, values);    
+    res.json({ message: 'Data inserted successfully', insertedData: result.rows[0] });
+  } catch (e) {
+    console.log(e)
+    res.status(500).send("database insert failed")
+  }
+
+})
 
 module.exports = router;
